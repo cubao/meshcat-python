@@ -164,7 +164,7 @@ class StaticFileHandlerNoCache(tornado.web.StaticFileHandler):
 class ZMQWebSocketBridge(object):
     context = zmq.Context()
 
-    def __init__(self, zmq_url=None, host="127.0.0.1", port=None,
+    def __init__(self, zmq_url=None, *, host="0.0.0.0", port=None,
                  certfile=None, keyfile=None, ngrok_http_tunnel=False):
         self.host = host
         self.websocket_pool = set()
@@ -179,7 +179,7 @@ class ZMQWebSocketBridge(object):
             self.zmq_socket, self.zmq_stream, self.zmq_url = self.setup_zmq(zmq_url)
 
         protocol = "http:"
-        listen_kwargs = {}
+        listen_kwargs = {'address': self.host}
         if certfile is not None or keyfile is not None:
             if certfile is None:
                 raise(Exception("You must supply a certfile if you supply a keyfile"))
@@ -193,6 +193,8 @@ class ZMQWebSocketBridge(object):
         if port is None:
             _, self.fileserver_port = find_available_port(self.app.listen, DEFAULT_FILESERVER_PORT, **listen_kwargs)
         else:
+            from pprint import pprint
+            pprint(listen_kwargs)
             self.app.listen(port, **listen_kwargs)
             self.fileserver_port = port
         self.web_url = "{protocol}//{host}:{port}/static/".format(
@@ -239,7 +241,7 @@ class ZMQWebSocketBridge(object):
         return tornado.web.Application([
             (r"/static/(.*)", StaticFileHandlerNoCache, {"path": VIEWER_ROOT, "default_filename": VIEWER_HTML}),
             (r"/", WebSocketHandler, {"bridge": self})
-        ])
+        ], debug=True)
 
     def wait_for_websockets(self):
         if len(self.websocket_pool) > 0:
@@ -387,6 +389,8 @@ def main():
 
     parser = argparse.ArgumentParser(description="Serve the MeshCat HTML files and listen for ZeroMQ commands")
     parser.add_argument('--zmq-url', '-z', type=str, nargs="?", default=None)
+    parser.add_argument('--host', type=str, default='0.0.0.0')
+    parser.add_argument('--port', type=int, default=None)
     parser.add_argument('--open', '-o', action="store_true")
     parser.add_argument('--certfile', type=str, default=None)
     parser.add_argument('--keyfile', type=str, default=None)
@@ -395,6 +399,8 @@ ngrok is a service for creating a public URL from your local machine, which
 is very useful if you would like to make your meshcat server public.""")
     results = parser.parse_args()
     bridge = ZMQWebSocketBridge(zmq_url=results.zmq_url,
+                                host=results.host,
+                                port=results.port,
                                 certfile=results.certfile,
                                 keyfile=results.keyfile,
                                 ngrok_http_tunnel=results.ngrok_http_tunnel)
