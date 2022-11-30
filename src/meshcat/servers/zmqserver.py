@@ -8,6 +8,7 @@ import sys
 import subprocess
 import multiprocessing
 import json
+import socket
 
 import tornado.web
 import tornado.ioloop
@@ -19,6 +20,27 @@ import zmq.eventloop.ioloop
 from zmq.eventloop.zmqstream import ZMQStream
 
 from .tree import SceneTree, walk, find_node
+
+
+def myip():
+    try:
+        """
+        https://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib
+        """
+        ip = [
+            l for l in ([
+                ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
+                if not ip.startswith("127.")
+            ][:1], [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close())
+                     for s in
+                     [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]])
+            if l
+        ][0][0]
+        if isinstance(ip, str):
+            return ip
+        return None
+    except:
+        return None
 
 
 def capture(pattern, s):
@@ -406,6 +428,10 @@ is very useful if you would like to make your meshcat server public.""")
                                 ngrok_http_tunnel=results.ngrok_http_tunnel)
     print("zmq_url={:s}".format(bridge.zmq_url))
     print("web_url={:s}".format(bridge.web_url))
+    web_url = bridge.web_url.lstrip('http://').lstrip('https://')
+    web_url = 'http://' + myip() + ':' + web_url.split(':', 1)[1]
+    print("web_url:", web_url)
+
     if results.open:
         webbrowser.open(bridge.web_url, new=2)
 

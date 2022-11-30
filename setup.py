@@ -1,7 +1,7 @@
 import sys
 from setuptools import setup, find_packages
 
-setup(name="meshcat",
+setup(name="cubao_meshcat",
     version="0.3.2",
     description="WebGL-based visualizer for 3D geometries and scenes",
     url="https://github.com/rdeits/meshcat-python",
@@ -14,7 +14,7 @@ setup(name="meshcat",
     test_suite="meshcat",
     entry_points={
         "console_scripts": [
-            "meshcat-server=meshcat.servers.zmqserver:main"
+            "cubao-meshcat-server=cubao_meshcat.servers.zmqserver:main"
         ]
     },
     install_requires=[
