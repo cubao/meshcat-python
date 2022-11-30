@@ -260,6 +260,7 @@ class ZMQWebSocketBridge(object):
         self.tree = SceneTree()
 
     def make_app(self):
+        print('VIEWER_ROOT', os.path.abspath(VIEWER_ROOT))
         return tornado.web.Application([
             (r"/static/(.*)", StaticFileHandlerNoCache, {"path": VIEWER_ROOT, "default_filename": VIEWER_HTML}),
             (r"/", WebSocketHandler, {"bridge": self})

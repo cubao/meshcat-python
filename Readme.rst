@@ -1,3 +1,9 @@
+make install serve
+make build upload
+
+---
+
+
 meshcat-python: Python Bindings to the MeshCat WebGL viewer
 ===========================================================
 
@@ -7,13 +13,13 @@ meshcat-python: Python Bindings to the MeshCat WebGL viewer
   :target: https://codecov.io/gh/rdeits/meshcat-python
 
 
-MeshCat_ is a remotely-controllable 3D viewer, built on top of three.js_. The viewer contains a tree of objects and transformations (i.e. a scene graph) and allows those objects and transformations to be added and manipulated with simple commands. This makes it easy to create 3D visualizations of geometries, mechanisms, and robots. 
+MeshCat_ is a remotely-controllable 3D viewer, built on top of three.js_. The viewer contains a tree of objects and transformations (i.e. a scene graph) and allows those objects and transformations to be added and manipulated with simple commands. This makes it easy to create 3D visualizations of geometries, mechanisms, and robots.
 
 The MeshCat architecture is based on the model used by Jupyter_:
 
 - The viewer itself runs entirely in the browser, with no external dependencies
 - The MeshCat server communicates with the viewer via WebSockets
-- Your code can use the meshcat python libraries or communicate directly with the server through its ZeroMQ_ socket. 
+- Your code can use the meshcat python libraries or communicate directly with the server through its ZeroMQ_ socket.
 
 .. _ZeroMQ: http://zguide.zeromq.org/
 .. _Jupyter: http://jupyter.org/
@@ -94,7 +100,7 @@ You can also instruct the server to open a browser window with:
 Protocol
 --------
 
-All communication with the meshcat server happens over the ZMQ socket. Some commands consist of multiple ZMQ frames. 
+All communication with the meshcat server happens over the ZMQ socket. Some commands consist of multiple ZMQ frames.
 
 :ZMQ frames:
     ``["url"]``
@@ -103,7 +109,7 @@ All communication with the meshcat server happens over the ZMQ socket. Some comm
 :Response:
     The web URL for the server. Open this URL in your browser to see the 3D scene.
 
-|	
+|
 
 :ZMQ frames:
     ``["wait"]``
@@ -111,13 +117,13 @@ All communication with the meshcat server happens over the ZMQ socket. Some comm
     Wait for a browser to connect
 :Response:
     "ok" when a brower has connected to the server. This is useful in scripts to block execution until geometry can actually be displayed.
-    
+
 |
 
 :ZMQ frames:
     ``["set_object", "/slash/separated/path", data]``
 :Action:
-    Set the object at the given path. ``data`` is a ``MsgPack``-encoded dictionary, described below. 
+    Set the object at the given path. ``data`` is a ``MsgPack``-encoded dictionary, described below.
 :Response:
     "ok"
 
@@ -126,7 +132,7 @@ All communication with the meshcat server happens over the ZMQ socket. Some comm
 :ZMQ frames:
     ``["set_transform", "/slash/separated/path", data]``
 :Action:
-    Set the transform of the object at the given path. There does not need to be any geometry at that path yet, so ``set_transform`` and ``set_object`` can happen in any order. ``data`` is a ``MsgPack``-encoded dictionary, described below. 
+    Set the transform of the object at the given path. There does not need to be any geometry at that path yet, so ``set_transform`` and ``set_object`` can happen in any order. ``data`` is a ``MsgPack``-encoded dictionary, described below.
 :Response:
     "ok"
 
@@ -135,7 +141,7 @@ All communication with the meshcat server happens over the ZMQ socket. Some comm
 :ZMQ frames:
     ``["delete", "/slash/separated/path", data]``
 :Action:
-    Delete the object at the given path. ``data`` is a ``MsgPack``-encoded dictionary, described below. 
+    Delete the object at the given path. ``data`` is a ``MsgPack``-encoded dictionary, described below.
 :Response:
     "ok"
 
@@ -151,10 +157,10 @@ All communication with the meshcat server happens over the ZMQ socket. Some comm
         "object": <three.js JSON>
     }
 
-The format of the ``object`` field is exactly the built-in JSON serialization format from three.js (note that we use the JSON structure, but actually use msgpack for the encoding due to its much better performance). For examples of the JSON structure, see the three.js wiki_ . 
+The format of the ``object`` field is exactly the built-in JSON serialization format from three.js (note that we use the JSON structure, but actually use msgpack for the encoding due to its much better performance). For examples of the JSON structure, see the three.js wiki_ .
 
 Note on redundancy
-    The ``type`` and ``path`` fields are duplicated: they are sent once in the first two ZeroMQ frames and once inside the MsgPack-encoded data. This is intentional and makes it easier for the server to handle messages without unpacking them fully. 
+    The ``type`` and ``path`` fields are duplicated: they are sent once in the first two ZeroMQ frames and once inside the MsgPack-encoded data. This is intentional and makes it easier for the server to handle messages without unpacking them fully.
 
 .. _wiki: https://github.com/mrdoob/three.js/wiki/JSON-Geometry-format-4
 .. _msgpack: https://msgpack.org/index.html
@@ -169,7 +175,7 @@ Note on redundancy
         "matrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
     }
 
-The format of the ``matrix`` in a ``set_transform`` command is a column-major homogeneous transformation matrix. 
+The format of the ``matrix`` in a ``set_transform`` command is a column-major homogeneous transformation matrix.
 
 ``delete`` data format
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -221,6 +227,6 @@ Translating that box by the vector ``[2, 3, 4]``:
 Packing Arrays
 --------------
 
-Msgpack's default behavior is not ideal for packing large contiguous arrays (it inserts a type code before every element). For faster transfer of large pointclouds and meshes, msgpack ``Ext`` codes are available for several types of arrays. For the full list, see https://github.com/kawanet/msgpack-lite#extension-types . The ``meshcat`` Python bindings will automatically use these ``Ext`` types for ``numpy`` array inputs. 
+Msgpack's default behavior is not ideal for packing large contiguous arrays (it inserts a type code before every element). For faster transfer of large pointclouds and meshes, msgpack ``Ext`` codes are available for several types of arrays. For the full list, see https://github.com/kawanet/msgpack-lite#extension-types . The ``meshcat`` Python bindings will automatically use these ``Ext`` types for ``numpy`` array inputs.
 
 
