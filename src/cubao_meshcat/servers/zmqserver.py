@@ -8,6 +8,7 @@ import sys
 import subprocess
 import multiprocessing
 import json
+import socket
 
 import tornado.web
 import tornado.ioloop
@@ -19,6 +20,27 @@ import zmq.eventloop.ioloop
 from zmq.eventloop.zmqstream import ZMQStream
 
 from .tree import SceneTree, walk, find_node
+
+
+def myip():
+    try:
+        """
+        https://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib
+        """
+        ip = [
+            l for l in ([
+                ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
+                if not ip.startswith("127.")
+            ][:1], [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close())
+                     for s in
+                     [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]])
+            if l
+        ][0][0]
+        if isinstance(ip, str):
+            return ip
+        return None
+    except:
+        return None
 
 
 def capture(pattern, s):
@@ -164,7 +186,7 @@ class StaticFileHandlerNoCache(tornado.web.StaticFileHandler):
 class ZMQWebSocketBridge(object):
     context = zmq.Context()
 
-    def __init__(self, zmq_url=None, host="127.0.0.1", port=None,
+    def __init__(self, zmq_url=None, *, host="0.0.0.0", port=None,
                  certfile=None, keyfile=None, ngrok_http_tunnel=False):
         self.host = host
         self.websocket_pool = set()
@@ -179,7 +201,7 @@ class ZMQWebSocketBridge(object):
             self.zmq_socket, self.zmq_stream, self.zmq_url = self.setup_zmq(zmq_url)
 
         protocol = "http:"
-        listen_kwargs = {}
+        listen_kwargs = {'address': self.host}
         if certfile is not None or keyfile is not None:
             if certfile is None:
                 raise(Exception("You must supply a certfile if you supply a keyfile"))
@@ -193,6 +215,8 @@ class ZMQWebSocketBridge(object):
         if port is None:
             _, self.fileserver_port = find_available_port(self.app.listen, DEFAULT_FILESERVER_PORT, **listen_kwargs)
         else:
+            from pprint import pprint
+            pprint(listen_kwargs)
             self.app.listen(port, **listen_kwargs)
             self.fileserver_port = port
         self.web_url = "{protocol}//{host}:{port}/static/".format(
@@ -236,10 +260,11 @@ class ZMQWebSocketBridge(object):
         self.tree = SceneTree()
 
     def make_app(self):
+        print('VIEWER_ROOT', os.path.abspath(VIEWER_ROOT))
         return tornado.web.Application([
             (r"/static/(.*)", StaticFileHandlerNoCache, {"path": VIEWER_ROOT, "default_filename": VIEWER_HTML}),
             (r"/", WebSocketHandler, {"bridge": self})
-        ])
+        ], debug=True)
 
     def wait_for_websockets(self):
         if len(self.websocket_pool) > 0:
@@ -387,6 +412,8 @@ def main():
 
     parser = argparse.ArgumentParser(description="Serve the MeshCat HTML files and listen for ZeroMQ commands")
     parser.add_argument('--zmq-url', '-z', type=str, nargs="?", default=None)
+    parser.add_argument('--host', type=str, default='0.0.0.0')
+    parser.add_argument('--port', type=int, default=None)
     parser.add_argument('--open', '-o', action="store_true")
     parser.add_argument('--certfile', type=str, default=None)
     parser.add_argument('--keyfile', type=str, default=None)
@@ -395,11 +422,17 @@ ngrok is a service for creating a public URL from your local machine, which
 is very useful if you would like to make your meshcat server public.""")
     results = parser.parse_args()
     bridge = ZMQWebSocketBridge(zmq_url=results.zmq_url,
+                                host=results.host,
+                                port=results.port,
                                 certfile=results.certfile,
                                 keyfile=results.keyfile,
                                 ngrok_http_tunnel=results.ngrok_http_tunnel)
     print("zmq_url={:s}".format(bridge.zmq_url))
     print("web_url={:s}".format(bridge.web_url))
+    web_url = bridge.web_url.lstrip('http://').lstrip('https://')
+    web_url = 'http://' + myip() + ':' + web_url.split(':', 1)[1]
+    print("web_url:", web_url)
+
     if results.open:
         webbrowser.open(bridge.web_url, new=2)
 

@@ -1,6 +1,6 @@
 import unittest
 
-from meshcat.servers.zmqserver import start_zmq_server_as_subprocess
+from cubao_meshcat.servers.zmqserver import start_zmq_server_as_subprocess
 
 class TestStartZmqServer(unittest.TestCase):
     """

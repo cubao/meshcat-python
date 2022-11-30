@@ -1,4 +1,5 @@
-graft src/meshcat/viewer
-prune src/meshcat/viewer/node_modules
-graft src/meshcat/examples
-graft src/meshcat/tests/data
+include README.md LICENSE.txt
+graft src/cubao_meshcat/viewer
+prune src/cubao_meshcat/viewer/node_modules
+graft src/cubao_meshcat/examples
+graft src/cubao_meshcat/tests/data
