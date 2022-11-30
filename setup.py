@@ -2,8 +2,10 @@ import sys
 from setuptools import setup, find_packages
 
 setup(name="cubao_meshcat",
-    version="0.3.2",
+    version="0.3.3",
     description="WebGL-based visualizer for 3D geometries and scenes",
+    long_description=open("README.md", encoding="utf-8").read(),
+    long_description_content_type="text/markdown",
     url="https://github.com/cubao/meshcat-python",
     author="tzx",
     author_email="dvorak4tzx@gmail.com",
