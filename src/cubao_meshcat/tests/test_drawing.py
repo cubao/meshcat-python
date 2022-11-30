@@ -10,14 +10,14 @@ import io
 
 import numpy as np
 
-import meshcat
-import meshcat.geometry as g
-import meshcat.transformations as tf
+import cubao_meshcat
+import cubao_meshcat.geometry as g
+import cubao_meshcat.transformations as tf
 
 
 class VisualizerTest(unittest.TestCase):
     def setUp(self):
-        self.vis = meshcat.Visualizer()
+        self.vis = cubao_meshcat.Visualizer()
 
         if "CI" in os.environ:
             port = self.vis.url().split(":")[-1].split("/")[0]
@@ -57,22 +57,22 @@ class TestDrawing(VisualizerTest):
 
         v = self.vis["meshes/valkyrie/head"]
         v.set_object(g.Mesh(
-            g.ObjMeshGeometry.from_file(os.path.join(meshcat.viewer_assets_path(), "data/head_multisense.obj")),
+            g.ObjMeshGeometry.from_file(os.path.join(cubao_meshcat.viewer_assets_path(), "data/head_multisense.obj")),
             g.MeshLambertMaterial(
                 map=g.ImageTexture(
-                    image=g.PngImage.from_file(os.path.join(meshcat.viewer_assets_path(), "data/HeadTextureMultisense.png"))
+                    image=g.PngImage.from_file(os.path.join(cubao_meshcat.viewer_assets_path(), "data/HeadTextureMultisense.png"))
                 )
             )
         ))
         v.set_transform(tf.translation_matrix([0, 0.5, 0.5]))
 
         v = self.vis["meshes/convex"]
-        v["obj"].set_object(g.Mesh(g.ObjMeshGeometry.from_file(os.path.join(meshcat.viewer_assets_path(), "../tests/data/mesh_0_convex_piece_0.obj"))))
-        v["stl_ascii"].set_object(g.Mesh(g.StlMeshGeometry.from_file(os.path.join(meshcat.viewer_assets_path(), "../tests/data/mesh_0_convex_piece_0.stl_ascii"))))
+        v["obj"].set_object(g.Mesh(g.ObjMeshGeometry.from_file(os.path.join(cubao_meshcat.viewer_assets_path(), "../tests/data/mesh_0_convex_piece_0.obj"))))
+        v["stl_ascii"].set_object(g.Mesh(g.StlMeshGeometry.from_file(os.path.join(cubao_meshcat.viewer_assets_path(), "../tests/data/mesh_0_convex_piece_0.stl_ascii"))))
         v["stl_ascii"].set_transform(tf.translation_matrix([0, -0.5, 0]))
-        v["stl_binary"].set_object(g.Mesh(g.StlMeshGeometry.from_file(os.path.join(meshcat.viewer_assets_path(), "../tests/data/mesh_0_convex_piece_0.stl_binary"))))
+        v["stl_binary"].set_object(g.Mesh(g.StlMeshGeometry.from_file(os.path.join(cubao_meshcat.viewer_assets_path(), "../tests/data/mesh_0_convex_piece_0.stl_binary"))))
         v["stl_binary"].set_transform(tf.translation_matrix([0, -1, 0]))
-        v["dae"].set_object(g.Mesh(g.DaeMeshGeometry.from_file(os.path.join(meshcat.viewer_assets_path(), "../tests/data/mesh_0_convex_piece_0.dae"))))
+        v["dae"].set_object(g.Mesh(g.DaeMeshGeometry.from_file(os.path.join(cubao_meshcat.viewer_assets_path(), "../tests/data/mesh_0_convex_piece_0.dae"))))
         v["dae"].set_transform(tf.translation_matrix([0, -1.5, 0]))
 
 
@@ -131,7 +131,7 @@ class TestMeshStreams(VisualizerTest):
         v = self.vis["meshes/convex"]
 
         # Obj file
-        filename = os.path.join(meshcat.viewer_assets_path(),
+        filename = os.path.join(cubao_meshcat.viewer_assets_path(),
                                 "../tests/data/mesh_0_convex_piece_0.obj")
         with open(filename, "r") as f:
             fio = StringIO(f.read())
@@ -139,7 +139,7 @@ class TestMeshStreams(VisualizerTest):
             v["stream_stl_ascii"].set_transform(tf.translation_matrix([0, 0.0, 0]))
 
         # STL ASCII
-        filename = os.path.join(meshcat.viewer_assets_path(),
+        filename = os.path.join(cubao_meshcat.viewer_assets_path(),
                                 "../tests/data/mesh_0_convex_piece_0.stl_ascii")
         with open(filename, "r") as f:
             fio = StringIO(f.read())
@@ -147,7 +147,7 @@ class TestMeshStreams(VisualizerTest):
             v["stream_stl_ascii"].set_transform(tf.translation_matrix([0, -0.5, 0]))
 
         # STL Binary
-        filename = os.path.join(meshcat.viewer_assets_path(),
+        filename = os.path.join(cubao_meshcat.viewer_assets_path(),
                                 "../tests/data/mesh_0_convex_piece_0.stl_binary")
         with open(filename, "rb") as f:
             fio = BytesIO(f.read())
@@ -155,7 +155,7 @@ class TestMeshStreams(VisualizerTest):
             v["stream_stl_binary"].set_transform(tf.translation_matrix([0, -1.0, 0]))
 
         # DAE
-        filename = os.path.join(meshcat.viewer_assets_path(),
+        filename = os.path.join(cubao_meshcat.viewer_assets_path(),
                                 "../tests/data/mesh_0_convex_piece_0.dae")
         with open(filename, "r") as f:
             fio = StringIO(f.read())
@@ -172,7 +172,7 @@ class TestStandaloneServer(unittest.TestCase):
             args.append("--open")
 
         self.server_proc = subprocess.Popen(args)
-        self.vis = meshcat.Visualizer(self.zmq_url)
+        self.vis = cubao_meshcat.Visualizer(self.zmq_url)
         # self.vis = meshcat.Visualizer()
         # self.vis.open()
 
@@ -203,7 +203,7 @@ class TestAnimation(VisualizerTest):
         v.set_transform(tf.translation_matrix([1., 0, 0]))
         v["cube"].set_object(g.Box([0.1, 0.2, 0.3]))
 
-        animation = meshcat.animation.Animation()
+        animation = cubao_meshcat.animation.Animation()
         with animation.at_frame(v, 0) as frame_vis:
             frame_vis.set_transform(tf.translation_matrix([0, 0, 0]))
         with animation.at_frame(v, 30) as frame_vis:
@@ -217,7 +217,7 @@ class TestCameraAnimation(VisualizerTest):
         v.set_transform(tf.translation_matrix([1., 0, 0]))
         v["cube"].set_object(g.Box([0.1, 0.2, 0.3]))
 
-        animation = meshcat.animation.Animation()
+        animation = cubao_meshcat.animation.Animation()
         with animation.at_frame(v, 0) as frame_vis:
             frame_vis.set_transform(tf.translation_matrix([0, 0, 0]))
         with animation.at_frame(v, 30) as frame_vis:

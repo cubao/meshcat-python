@@ -3,8 +3,8 @@ import os
 import subprocess
 import sys
 
-import meshcat
-import meshcat.geometry as g
+import cubao_meshcat
+import cubao_meshcat.geometry as g
 
 
 class TestPortScan(unittest.TestCase):
@@ -16,10 +16,10 @@ class TestPortScan(unittest.TestCase):
     def setUp(self):
 
         # the blocking_vis will take up the default fileserver and ZMQ ports
-        self.blocking_vis = meshcat.Visualizer()
+        self.blocking_vis = cubao_meshcat.Visualizer()
 
         # this should still work, by chosing a new port
-        self.vis = meshcat.Visualizer()
+        self.vis = cubao_meshcat.Visualizer()
 
         if "CI" in os.environ:
             port = self.vis.url().split(":")[-1].split("/")[0]
