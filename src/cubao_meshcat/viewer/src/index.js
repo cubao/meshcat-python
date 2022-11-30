@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-var msgpack = require('@msgpack/msgpack');
+var THREE = require('three');
+var msgpack = require('msgpack-lite');
 var dat = require('dat.gui').default; // TODO: why is .default needed?
 import {mergeBufferGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {OBJLoader2, MtlObjBridge} from 'wwobjloader2'
@@ -8,43 +8,6 @@ import {MTLLoader} from 'three/examples/jsm/loaders/MTLLoader.js';
 import {STLLoader} from 'three/examples/jsm/loaders/STLLoader.js';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 require('ccapture.js');
-
-// We must implement extension types 0x16 and 0x17. The trick to
-// decoding them is they must be converted from littleEndian.
-const extensionCodec = new msgpack.ExtensionCodec();
-// Uint32Array
-extensionCodec.register({
-  type: 0x16,
-  encode: (obj) => {
-    console.error("Uint32Array encode not implemented")
-    return null;
-  },
-  decode: (data) => {
-    const to_return = new Uint32Array(data.byteLength / 4);
-    let dataview = new DataView(data.buffer, data.byteOffset, data.byteLength);
-    for (let i = 0; i < to_return.length; i++) {
-      to_return[i] = dataview.getUint32(i * 4, true);  // true b.c. littleEndian
-    }
-    return to_return
-  },
-});
-   +
-// Float32Array
-extensionCodec.register({
-  type: 0x17,
-  encode: (obj) => {
-    console.error("Float32Array encode not implemented")
-    return null;
-  },
-  decode: (data) => {
-    const to_return = new Float32Array(data.byteLength / 4);
-    let dataview = new DataView(data.buffer, data.byteOffset, data.byteLength);
-    for (let i = 0; i < to_return.length; i++) {
-      to_return[i] = dataview.getFloat32(i * 4, true);  // true b.c. littleEndian
-    }
-    return to_return
-  },
-});
 
 // Merges a hierarchy of collada mesh geometries into a single
 // `BufferGeometry` object:
@@ -328,7 +291,6 @@ class SceneNode {
         for (let c of this.controllers) {
             this.folder.remove(c);
         }
-        this.controllers = [];
         if (this.vis_controller !== undefined) {
             this.folder.domElement.removeChild(this.vis_controller.domElement);
         }
@@ -633,12 +595,11 @@ class Animator {
         folder.add(this, "pause");
         folder.add(this, "reset");
 
-        // Note, for some reason when you call `.max()` on a slider controller
-        // it does correctly change how the slider behaves but does not change
-        // the range of values that can be entered into the text box attached
-        // to the slider. Oh well. We work around this by creating the slider
-        // with an unreasonably huge range and then calling `.min()` and
-        // `.max()` on it later.
+        // Note, for some reason when you call `.max()` on a slider controller it does
+        // correctly change how the slider behaves but does not change the range of values
+        // that can be entered into the text box attached to the slider. Oh well. We work
+        // around this by creating the slider with an unreasonably huge range and then calling
+        // `.min()` and `.max()` on it later.
         this.time_scrubber = folder.add(this, "time", 0, 1e9, 0.001);
         this.time_scrubber.onChange((value) => this.seek(value));
 
@@ -727,14 +688,17 @@ function gradient_texture(top_color, bottom_color) {
     let width = 1;
     let height = 2;
     let size = width * height;
-    var data = new Uint8Array(4 * size);
-    for (let i = 0; i < 3; ++i) {
-        data[i] = bottom_color[i];
-	data[4 + i] = top_color[i];
+    var data = new Uint8Array(3 * size);
+    for (let row = 0; row < height; row++) {
+        let color = colors[row];
+        for (let col = 0; col < width; col++) {
+            let i = 3 * (row * width + col);
+            for (let j = 0; j < 3; j++) {
+                data[i + j] = color[j];
+            }
+        }
     }
-    data[3] = data[7] = 255; // Alpha = 1.0
-
-    var texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat);
+    var texture = new THREE.DataTexture(data, width, height, THREE.RGBFormat);
     texture.magFilter = THREE.LinearFilter;
     texture.encoding = THREE.LinearEncoding;
     // By default, the points in our texture map to the center of
@@ -765,7 +729,6 @@ class Viewer {
 
         this.scene = create_default_scene();
         this.gui_controllers = {};
-        this.keydown_callbacks = {};
         this.create_scene_tree();
 
         this.add_default_scene_elements();
@@ -777,20 +740,11 @@ class Viewer {
         // TODO: probably shouldn't be directly accessing window?
         window.onload = (evt) => this.set_3d_pane_size();
         window.addEventListener('resize', (evt) => this.set_3d_pane_size(), false);
-        window.addEventListener('keydown', (evt) => {this.on_keydown(evt);}); 
 
         requestAnimationFrame(() => this.set_3d_pane_size());
         if (animate || animate === undefined) {
             this.animate();
         }
-    }
-
-    on_keydown(e) {
-      if (e.code in this.keydown_callbacks) {
-        for (const o of this.keydown_callbacks[e.code]) {
-          o["callback"](e);
-        }
-      }
     }
 
     hide_background() {
@@ -923,7 +877,7 @@ class Viewer {
             w = this.dom_element.offsetWidth;
         }
         if (h === undefined) {
-            h = this.dom_element.offsetHeight;
+            h = window.innerHeight;
         }
         if (this.camera.type == "OrthographicCamera") {
             this.camera.right = this.camera.left + w*(this.camera.top - this.camera.bottom)/h;
@@ -951,14 +905,9 @@ class Viewer {
         }
     }
 
-    capture_image(w, h) {
-        let w_prev = this.dom_element.offsetWidth;
-        let h_prev = this.dom_element.offsetHeight;
-        this.set_3d_pane_size(w, h);
+    capture_image() {
         this.render();
-        let data = this.renderer.domElement.toDataURL();
-        this.set_3d_pane_size(w_prev, h_prev);
-        return data;
+        return this.renderer.domElement.toDataURL();
     }
 
     save_image() {
@@ -976,10 +925,6 @@ class Viewer {
         this.controls.addEventListener('change', () => {
             this.set_dirty()
         });
-    }
-
-    set_camera_target(value) {
-        this.controls.target.set(value[0], value[1], value[2]);
     }
 
     set_camera_from_json(data) {
@@ -1040,55 +985,21 @@ class Viewer {
         this.animator.load(animations, options);
     }
 
-    // keycode1 and keycode2 are the KeyboardEvent.code values, e.g. "KeyB",
-    // https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_code_values
-    // Buttons have at most one keycode assigned to them (which causes the
-    // button to callback to fire).  Sliders have two keycodes assigned to
-    // them; one to decrease the value by step, the other to increase it.
-    set_control(name, callback, value, min, max, step,
-                keycode1, keycode2) {
-        let my_callback = eval(callback);
+    set_control(name, callback, value, min, max, step) {
         let handler = {};
         if (name in this.gui_controllers) {
             this.gui.remove(this.gui_controllers[name]);
         }
         if (value !== undefined) {
-          handler[name] = value;
+            handler[name] = value;
             this.gui_controllers[name] = this.gui.add(
                 handler, name, min, max, step);
-            this.gui_controllers[name].onChange(my_callback);
-            function add_callback(viewer, keycode, increment) {
-              if (keycode != undefined) {
-                let keydown_callback = {name: name, callback: () => {
-                  // Decrease value by step (within limits), and trigger
-                  // callback.
-                  value = viewer.gui_controllers[name].getValue();
-                  let new_value = 
-                    Math.min(Math.max(value + increment, min), max);
-                  viewer.gui_controllers[name].setValue(new_value);
-                }};
-                if (keycode in viewer.keydown_callbacks) {
-                  viewer.keydown_callbacks[keycode].push(keydown_callback);
-                } else {
-                  viewer.keydown_callbacks[keycode] = [keydown_callback];
-                }
-              }
-            }
-            add_callback(this, keycode1, -step);
-            add_callback(this, keycode2, +step);
+            this.gui_controllers[name].onChange(eval(callback));
         } else {
-            handler[name] = my_callback;
+            handler[name] = eval(callback);
             this.gui_controllers[name] = this.gui.add(handler, name);
             // The default layout for dat.GUI buttons is broken, with the button name artificially truncated at the same width that slider names are truncated.  We fix that here.
             this.gui_controllers[name].domElement.parentElement.querySelector('.property-name').style.width="100%";
-            if (keycode1 != undefined) {
-              let keydown_callback = {name: name, callback: my_callback};
-              if (keycode1 in this.keydown_callbacks) {
-                this.keydown_callbacks[keycode1].push(keydown_callback);
-              } else {
-                this.keydown_callbacks[keycode1] = [keydown_callback];
-              }
-            }
         }
     }
 
@@ -1108,15 +1019,6 @@ class Viewer {
         if (name in this.gui_controllers) {
             this.gui.remove(this.gui_controllers[name]);
             delete this.gui_controllers[name];
-        }
-        // Remove any callbacks associated with this name.
-        for (let code in this.keydown_callbacks) {
-          let i=this.keydown_callbacks[code].length;
-          while (i--) {
-            if (this.keydown_callbacks[code][i]["name"] == name) {
-              this.keydown_callbacks[code].splice(i, 1);
-            }
-          }
         }
     }
 
@@ -1138,20 +1040,14 @@ class Viewer {
                 animation.path = split_path(animation.path);
             });
             this.set_animation(cmd.animations, cmd.options);
-        } else if (cmd.type == "set_target") {
-            this.set_camera_target(cmd.value);
         } else if (cmd.type == "set_control") {
-            this.set_control(cmd.name, cmd.callback, cmd.value, cmd.min, cmd.max, cmd.step, cmd.keycode1, cmd.keycode2);
+            this.set_control(cmd.name, cmd.callback, cmd.value, cmd.min, cmd.max, cmd.step);
         } else if (cmd.type == "set_control_value") {
             this.set_control_value(cmd.name, cmd.value, cmd.invoke_callback);
         } else if (cmd.type == "delete_control") {
             this.delete_control(cmd.name);
         } else if (cmd.type == "capture_image") {
-            let w = cmd.xres || 1920;
-            let h = cmd.yres || 1080;
-            w = w / this.renderer.getPixelRatio();
-            h = h / this.renderer.getPixelRatio();
-            let imgdata = this.capture_image(w, h);
+            let imgdata = this.capture_image();
             this.connection.send(JSON.stringify({
                 'type': 'img',
                 'data': imgdata
@@ -1162,19 +1058,14 @@ class Viewer {
         this.set_dirty();
     }
 
-    decode(message) {
-      return msgpack.decode(new Uint8Array(message.data), { extensionCodec });
-    }
-
     handle_command_bytearray(bytearray) {
-      let decoded = msgpack.decode(bytearray, {extensionCodec});
-      this.handle_command(decoded);
+        let decoded = msgpack.decode(bytearray);
+        this.handle_command(decoded);
     }
-
+    
     handle_command_message(message) {
-      this.num_messages_received++;
-      let decoded = this.decode(message);
-      this.handle_command(decoded);
+        this.num_messages_received++;
+        this.handle_command_bytearray(new Uint8Array(message.data));
     }
 
     connect(url) {
@@ -1268,4 +1159,4 @@ style.sheet.insertRule(`
         padding: 0 0 0 0px;
     }`);
 
-export { Viewer, THREE, msgpack };
+export { Viewer, THREE };
